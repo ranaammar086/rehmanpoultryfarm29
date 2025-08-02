@@ -192,8 +192,11 @@
           .then(res => res.json())
           .then(data => {
             const feed = data.feeds[0];
-            const tempValue = feed?.field1 || "-";
-            const humValue = feed?.field2 || "-";
+            let tempValue = feed?.field1;
+let humValue = feed?.field2;
+
+tempValue = (tempValue && !isNaN(tempValue)) ? parseFloat(tempValue).toFixed(1) : "-";
+humValue = (humValue && !isNaN(humValue)) ? parseFloat(humValue).toFixed(1) : "-";
             document.getElementById(`temp-${channelId}`).textContent = tempValue;
             document.getElementById(`hum-${channelId}`).textContent = humValue;
 
