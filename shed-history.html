@@ -147,46 +147,86 @@
     const lowTempEl = document.getElementById('lowTemp');
     const downloadBtn = document.getElementById('downloadBtn');
 
+    // Pakistan Standard Time offset in minutes (+5 hours = 300 minutes)
+    const PST_OFFSET_MINUTES = 5 * 60;
+
     function setTodayDate() {
-      const today = new Date().toISOString().split('T')[0];
-      dateInput.value = today;
+      const today = new Date();
+      // Convert today to PST date string (yyyy-mm-dd)
+      const pstToday = toPSTDate(today);
+      dateInput.value = pstToday;
     }
 
+    // Convert a UTC date to Pakistan time string yyyy-mm-dd
+    function toPSTDate(date) {
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      const pst = new Date(utc + PST_OFFSET_MINUTES * 60000);
+      return pst.toISOString().slice(0, 10);
+    }
+
+    // Convert UTC ISO date string to Date object adjusted to PST
+    function parseUTCtoPST(dateStr) {
+      const utcDate = new Date(dateStr);
+      const utcTime = utcDate.getTime();
+      return new Date(utcTime + PST_OFFSET_MINUTES * 60000);
+    }
+
+    // Format Date object (PST) to HH:mm
     function formatTime(date) {
-      return date.toTimeString().slice(0,5);
+      return date.getHours().toString().padStart(2, '0') + ":" + date.getMinutes().toString().padStart(2, '0');
     }
 
+    // Generate intervals for the selected date in PST time
+    function generateIntervals(dateStr, intervalMinutes) {
+      const intervals = [];
+      // Start of the day in PST
+      const baseDate = new Date(dateStr + "T00:00:00");
+      for (let mins = 0; mins < 24 * 60; mins += intervalMinutes) {
+        intervals.push(new Date(baseDate.getTime() + mins * 60000));
+      }
+      return intervals;
+    }
+
+    // Group feeds by interval and calculate first reading and averages
     function groupData(feeds, intervalMinutes) {
       const groups = new Map();
+
+      const intervals = generateIntervals(dateInput.value, intervalMinutes);
+
+      // Initialize map with empty arrays for each interval time string
+      intervals.forEach(intervalDate => {
+        groups.set(formatTime(intervalDate), []);
+      });
+
+      // Filter and assign feeds to intervals based on PST time
+      for (const feed of feeds) {
+        if (!feed.created_at) continue;
+        const pstDate = parseUTCtoPST(feed.created_at);
+
+        // Check if feed is on selected PST date
+        const feedDateStr = pstDate.toISOString().slice(0, 10);
+        if (feedDateStr !== dateInput.value) continue;
+
+        // Find interval start time for this feed (floor by intervalMinutes)
+        const totalMins = pstDate.getHours() * 60 + pstDate.getMinutes();
+        const roundedMins = totalMins - (totalMins % intervalMinutes);
+        const intervalHour = Math.floor(roundedMins / 60);
+        const intervalMinute = roundedMins % 60;
+        const intervalKey = intervalHour.toString().padStart(2, '0') + ":" + intervalMinute.toString().padStart(2, '0');
+
+        if (groups.has(intervalKey)) {
+          groups.get(intervalKey).push(feed);
+        }
+      }
 
       let highTemp = -Infinity;
       let lowTemp = Infinity;
 
-      const intervals = [];
-      const startDate = new Date(dateInput.value + "T00:00:00");
-      for(let ms = 0; ms < 24*60*60*1000; ms += intervalMinutes*60000) {
-        const d = new Date(startDate.getTime() + ms);
-        intervals.push(d);
-        groups.set(formatTime(d), []);
-      }
-
-      for (const feed of feeds) {
-        if (!feed.created_at) continue;
-        const feedDate = new Date(feed.created_at);
-        const feedDateStr = feedDate.toISOString().slice(0,10);
-        if (feedDateStr !== dateInput.value) continue;
-
-        const mins = feedDate.getMinutes();
-        const roundedMins = mins - (mins % intervalMinutes);
-        const intervalKey = feedDate.getHours().toString().padStart(2,'0') + ":" + roundedMins.toString().padStart(2,'0');
-
-        groups.get(intervalKey)?.push(feed);
-      }
-
       const resultRows = [];
 
-      for (const intervalTime of intervals) {
-        const key = formatTime(intervalTime);
+      // Build rows for each interval
+      for (const intervalDate of intervals) {
+        const key = formatTime(intervalDate);
         const feedsInInterval = groups.get(key) || [];
 
         if (feedsInInterval.length === 0) {
@@ -200,16 +240,19 @@
           continue;
         }
 
-        feedsInInterval.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        const firstFeed = feedsInInterval[0];
-        const firstTemp = parseFloat(firstFeed.field1);
-        const firstHum = parseFloat(firstFeed.field2);
+        // Sort by actual time ascending to get the first reading
+        feedsInInterval.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
 
+        // First reading temp & hum
+        const firstTemp = parseFloat(feedsInInterval[0].field1);
+        const firstHum = parseFloat(feedsInInterval[0].field2);
+
+        // Calculate averages
         const temps = feedsInInterval.map(f => parseFloat(f.field1)).filter(t => !isNaN(t));
         const hums = feedsInInterval.map(f => parseFloat(f.field2)).filter(h => !isNaN(h));
 
-        const avgTemp = temps.length ? (temps.reduce((a,b) => a+b,0)/temps.length).toFixed(1) : "-";
-        const avgHum = hums.length ? (hums.reduce((a,b) => a+b,0)/hums.length).toFixed(1) : "-";
+        const avgTemp = temps.length ? (temps.reduce((a,b) => a+b,0) / temps.length).toFixed(1) : "-";
+        const avgHum = hums.length ? (hums.reduce((a,b) => a+b,0) / hums.length).toFixed(1) : "-";
 
         if (avgTemp !== "-") {
           highTemp = Math.max(highTemp, parseFloat(avgTemp));
@@ -232,7 +275,6 @@
     }
 
     async function fetchData() {
-      const date = dateInput.value;
       const interval = parseInt(intervalSelect.value);
 
       tbody.innerHTML = `<tr><td colspan="5">Loading data...</td></tr>`;
@@ -240,6 +282,7 @@
       lowTempEl.textContent = "-";
 
       try {
+        // Fetch max 8000 entries - adjust if needed
         const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?results=8000`;
         const response = await fetch(url);
         const data = await response.json();
@@ -256,58 +299,56 @@
           tbody.innerHTML = `<tr><td colspan="5">No data available for selected date.</td></tr>`;
           return;
         }
-        for (const row of rows) {
+
+        rows.forEach(row => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${row.time}</td><td>${row.temp}</td><td>${row.hum}</td><td>${row.avgT}</td><td>${row.avgH}</td>`;
+          tr.innerHTML = `
+            <td>${row.time}</td>
+            <td>${row.temp}</td>
+            <td>${row.hum}</td>
+            <td>${row.avgT}</td>
+            <td>${row.avgH}</td>
+          `;
           tbody.appendChild(tr);
-        }
-      } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="5">Error loading data.</td></tr>`;
-        console.error(error);
+        });
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5">Error fetching data.</td></tr>`;
+        console.error(err);
       }
     }
 
-    function updateTitle() {
-      shedTitle.textContent = `${shedName} - ${dateInput.value}`;
-    }
-
-    dateInput.addEventListener('change', () => {
-      updateTitle();
-      fetchData();
-    });
-
-    intervalSelect.addEventListener('change', () => {
-      fetchData();
-    });
-
-    downloadBtn.addEventListener('click', () => {
+    function downloadPDF() {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const doc = new jsPDF();
 
-      doc.setFontSize(16);
-      doc.text(`Rehman Poultry Farm 29/11L - ${shedName}`, 10, 15);
-      doc.setFontSize(12);
-      doc.text(`Date: ${dateInput.value}`, 10, 22);
-      doc.text(`High Temp: ${highTempEl.textContent} °C`, 10, 30);
-      doc.text(`Low Temp: ${lowTempEl.textContent} °C`, 60, 30);
+      doc.setFontSize(18);
+      doc.text("Rehman Poultry Farm 29/11L", 14, 20);
+      doc.setFontSize(14);
+      doc.text(`Shed: ${shedName}`, 14, 30);
+      doc.text(`Date: ${dateInput.value}`, 14, 38);
+      doc.text(`Interval: ${intervalSelect.value} Minute(s)`, 14, 46);
 
       doc.autoTable({
-        head: [['Time', 'Temperature', 'Humidity', 'Avg Temp', 'Avg Humidity']],
-        body: Array.from(tbody.children).map(tr =>
-          Array.from(tr.children).map(td => td.textContent)
-        ),
-        startY: 40,
-        theme: 'grid'
+        startY: 55,
+        head: [['Time', 'Temperature', 'Humidity', 'Avg Temperature', 'Avg Humidity']],
+        body: Array.from(tbody.rows).map(r => Array.from(r.cells).map(c => c.textContent)),
+        theme: 'striped',
+        headStyles: { fillColor: [52, 152, 219] }
       });
 
-      doc.save(`${shedName.replace(/\s+/g, '_')}_${dateInput.value}.pdf`);
-    });
+      doc.save(`Shed_${shedName}_${dateInput.value}.pdf`);
+    }
 
-    // Init
+    // Initialize page
     shedTitle.textContent = shedName;
     setTodayDate();
-    updateTitle();
     fetchData();
+
+    dateInput.addEventListener('change', fetchData);
+    intervalSelect.addEventListener('change', fetchData);
+    downloadBtn.addEventListener('click', downloadPDF);
   </script>
+
 </body>
 </html>
