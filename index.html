@@ -35,7 +35,6 @@
     }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       grid-template-columns: repeat(6, 1fr);
       gap: 20px;
       padding: 20px;
@@ -48,6 +47,10 @@
       position: relative;
       cursor: pointer;
       transition: transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
     }
     .card:hover {
       transform: scale(1.02);
@@ -62,26 +65,39 @@
     .card h3 {
       margin: 0 0 10px 0;
       color: #34495e;
+      width: 100%;
     }
     .value-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-  font-size: 1rem;
-  text-align: center;
-}
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 1rem;
+      gap: 5px;
+      width: 100%;
+      font-weight: 600;
+    }
+    .value-row span.value {
+      font-size: 1.3rem;
+      font-weight: bold;
+      min-width: 60px;
+      text-align: center;
+    }
+    .limits {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 8px;
+      font-weight: 600;
+      width: 100%;
+    }
     .footer {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       font-size: 0.9rem;
       color: #555;
       margin-top: 10px;
-    }
-    .limits {
-      font-size: 0.8rem;
-      color: #777;
+      width: 100%;
     }
     .icon {
       margin-right: 5px;
@@ -183,9 +199,11 @@
 
         card.innerHTML = `
           <h3>${shed}</h3>
-          <div class="value-row"><span>🌡️ Temp:</span> <span id="temp-$1" class="value">- °C</span></div>
-          <div class="value-row"><span>💧 Hum:</span> <span id="hum-$1" class="value">- %</span></div>
-          <div class="limits">Low: <span id="low-limit-${channelId}">${limits.low}</span>° | High: <span id="high-limit-${channelId}">${limits.high}</span>°</div>
+          <div class="value-row"><span>🌡️ Temp:</span> <span id="temp-${channelId}" class="value">- °C</span></div>
+          <div class="value-row"><span>💧 Hum:</span> <span id="hum-${channelId}" class="value">- %</span></div>
+          <div class="limits" style="text-align: center;">
+            Low: <span id="low-limit-${channelId}">${limits.low}</span>° | High: <span id="high-limit-${channelId}">${limits.high}</span>°
+          </div>
           <div class="footer"><span></span><span id="last-updated-${channelId}">🕒 -</span></div>
         `;
         shedGrid.appendChild(card);
@@ -195,10 +213,11 @@
           .then(data => {
             const feed = data.feeds[0];
             let tempValue = feed?.field1;
-let humValue = feed?.field2;
+            let humValue = feed?.field2;
 
-tempValue = (tempValue && !isNaN(tempValue)) ? parseFloat(tempValue).toFixed(1) : "-";
-humValue = (humValue && !isNaN(humValue)) ? parseFloat(humValue).toFixed(1) : "-";
+            tempValue = (tempValue && !isNaN(tempValue)) ? parseFloat(tempValue).toFixed(1) : "-";
+            humValue = (humValue && !isNaN(humValue)) ? parseFloat(humValue).toFixed(1) : "-";
+
             document.getElementById(`temp-${channelId}`).textContent = tempValue + ' °C';
             document.getElementById(`hum-${channelId}`).textContent = humValue + ' %';
 
@@ -216,8 +235,8 @@ humValue = (humValue && !isNaN(humValue)) ? parseFloat(humValue).toFixed(1) : "-
             }
           })
           .catch(() => {
-            document.getElementById(`temp-${channelId}`).textContent = "-";
-            document.getElementById(`hum-${channelId}`).textContent = "-";
+            document.getElementById(`temp-${channelId}`).textContent = "- °C";
+            document.getElementById(`hum-${channelId}`).textContent = "- %";
             document.getElementById(`last-updated-${channelId}`).textContent = `🕒 -`;
             document.getElementById(`card-${channelId}`).classList.remove("blinking");
           });
@@ -253,4 +272,3 @@ humValue = (humValue && !isNaN(humValue)) ? parseFloat(humValue).toFixed(1) : "-
   </script>
 </body>
 </html>
-
