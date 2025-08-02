@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Farm Environment Monitor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .shed {
+      background: white;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .charts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    canvas {
+      max-width: 100%;
+      height: 300px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🌾 Farm Environment Monitoring</h1>
+
+<div id="sheds-container"></div>
+
+<script>
+  const shedChannels = {
+    "Shed 1": 3006164,
+    "Shed 2": 3015510,
+    "Shed 3": 3015591,
+    "Shed 4": 2987949,
+    "Shed 5": 2996099,
+    "Shed 6": 3015530,
+    "Shed 7": 3015575,
+    "Shed 8": 3015584,
+    "Shed 9": 3015587,
+    "Shed 10": 3015516,
+    "Shed 11": 3015518,
+    "Shed 12": 3015595,
+    "Shed 13": 2996101,
+    "Shed 14": 2996102,
+    "Shed 15": 3015597,
+    "Shed 16": 3015601,
+    "Shed 17": 3015608,
+    "Shed 18": 3015612
+  };
+
+  const results = 50; // Number of recent data points
+
+  const container = document.getElementById('sheds-container');
+
+  for (const [shed, channelId] of Object.entries(shedChannels)) {
+    const shedDiv = document.createElement('div');
+    shedDiv.className = 'shed';
+
+    shedDiv.innerHTML = `
+      <h2>${shed}</h2>
+      <div class="charts">
+        <canvas id="temp-${channelId}"></canvas>
+        <canvas id="hum-${channelId}"></canvas>
+      </div>
+    `;
+
+    container.appendChild(shedDiv);
+
+    fetch(`https://api.thingspeak.com/channels/${channelId}/feeds.json?results=${results}`)
+      .then(res => res.json())
+      .then(data => {
+        const feeds = data.feeds;
+        const labels = feeds.map(e => new Date(e.created_at).toLocaleString());
+        const temp = feeds.map(e => parseFloat(e.field1));
+        const hum = feeds.map(e => parseFloat(e.field2));
+
+        new Chart(document.getElementById(`temp-${channelId}`), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Temperature (°C)',
+              data: temp,
+              borderColor: 'red',
+              backgroundColor: 'rgba(255,0,0,0.1)',
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+
+        new Chart(document.getElementById(`hum-${channelId}`), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Humidity (%)',
+              data: hum,
+              borderColor: 'blue',
+              backgroundColor: 'rgba(0,0,255,0.1)',
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      });
+  }
+</script>
+
+</body>
+</html>
