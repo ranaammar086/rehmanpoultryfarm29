@@ -1,134 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Farm Environment Monitor</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <title>Rehman Poultry Farm 29/11L</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
       margin: 0;
-      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f8fb;
     }
-    h1 {
+    header {
       text-align: center;
-      margin-bottom: 40px;
-    }
-    .shed {
-      background: white;
       padding: 20px;
-      margin-bottom: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      background: #2c3e50;
+      color: white;
+      font-size: 1.8rem;
+      font-weight: bold;
     }
-    .charts {
+    .buttons {
       display: flex;
-      flex-wrap: wrap;
+      justify-content: center;
       gap: 20px;
+      margin: 20px;
     }
-    canvas {
-      max-width: 100%;
-      height: 300px;
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #2980b9;
+      color: white;
+      font-weight: bold;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(6, 1fr);
+      gap: 20px;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .card.blinking {
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { background-color: #ffe6e6; }
+      50% { background-color: #ffcccc; }
+    }
+    .card h3 {
+      margin: 0 0 10px 0;
+      color: #34495e;
+    }
+    .value-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 1rem;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 10px;
+    }
+    .limits {
+      font-size: 0.8rem;
+      color: #777;
+    }
+    .icon {
+      margin-right: 5px;
     }
   </style>
 </head>
 <body>
+  <header>Rehman Poultry Farm 29/11L</header>
 
-<h1>🌾 Farm Environment Monitoring</h1>
+  <div class="buttons">
+    <button id="setAllLimitsBtn">Set All Limits</button>
+  </div>
 
-<div id="sheds-container"></div>
+  <div class="grid" id="shedGrid"></div>
 
-<script>
-  const shedChannels = {
-    "Shed 1": 3006164,
-    "Shed 2": 3015510,
-    "Shed 3": 3015591,
-    "Shed 4": 2987949,
-    "Shed 5": 2996099,
-    "Shed 6": 3015530,
-    "Shed 7": 3015575,
-    "Shed 8": 3015584,
-    "Shed 9": 3015587,
-    "Shed 10": 3015516,
-    "Shed 11": 3015518,
-    "Shed 12": 3015595,
-    "Shed 13": 2996101,
-    "Shed 14": 2996102,
-    "Shed 15": 3015597,
-    "Shed 16": 3015601,
-    "Shed 17": 3015608,
-    "Shed 18": 3015612
-  };
+  <div id="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#00000080; justify-content:center; align-items:center;">
+    <div style="background:white; padding:20px; border-radius:10px; min-width:300px;">
+      <h3>Set Temperature Limits</h3>
+      <form id="limitsForm">
+        <label>Low Temp: <input type="number" id="lowInput" required /></label><br/><br/>
+        <label>High Temp: <input type="number" id="highInput" required /></label><br/><br/>
+        <button type="submit">Save</button>
+        <button type="button" id="btnCancel">Cancel</button>
+      </form>
+    </div>
+  </div>
 
-  const results = 50; // Number of recent data points
+  <script>
+    const shedChannels = {
+      "Shed 1": 3006164,
+      "Shed 2": 3015510,
+      "Shed 3": 3015591,
+      "Shed 4": 2987949,
+      "Shed 5": 2996099,
+      "Shed 6": 3015530,
+      "Shed 7": 3015575,
+      "Shed 8": 3015584,
+      "Shed 9": 3015587,
+      "Shed 10": 3015516,
+      "Shed 11": 3015518,
+      "Shed 12": 3015595,
+      "Shed 13": 2996101,
+      "Shed 14": 2996102,
+      "Shed 15": 3015597,
+      "Shed 16": 3015601,
+      "Shed 17": 3015608,
+      "Shed 18": 3015612,
+    };
 
-  const container = document.getElementById('sheds-container');
+    const shedGrid = document.getElementById("shedGrid");
+    const modal = document.getElementById("modal");
+    const lowInput = document.getElementById("lowInput");
+    const highInput = document.getElementById("highInput");
+    const btnCancel = document.getElementById("btnCancel");
+    const limitsForm = document.getElementById("limitsForm");
+    const setAllLimitsBtn = document.getElementById("setAllLimitsBtn");
 
-  for (const [shed, channelId] of Object.entries(shedChannels)) {
-    const shedDiv = document.createElement('div');
-    shedDiv.className = 'shed';
+    let currentEditingShedId = null;
+    let isSettingAll = false;
 
-    shedDiv.innerHTML = `
-      <h2>${shed}</h2>
-      <div class="charts">
-        <canvas id="temp-${channelId}"></canvas>
-        <canvas id="hum-${channelId}"></canvas>
-      </div>
-    `;
+    function openLimitsModal(shedId) {
+      currentEditingShedId = shedId;
+      isSettingAll = !shedId;
+      if (!shedId) {
+        lowInput.value = 20;
+        highInput.value = 35;
+      } else {
+        const limits = getLimits(shedId);
+        lowInput.value = limits.low;
+        highInput.value = limits.high;
+      }
+      modal.style.display = "flex";
+    }
 
-    container.appendChild(shedDiv);
+    function closeModal() {
+      modal.style.display = "none";
+    }
 
-    fetch(`https://api.thingspeak.com/channels/${channelId}/feeds.json?results=${results}`)
-      .then(res => res.json())
-      .then(data => {
-        const feeds = data.feeds;
-        const labels = feeds.map(e => new Date(e.created_at).toLocaleString());
-        const temp = feeds.map(e => parseFloat(e.field1));
-        const hum = feeds.map(e => parseFloat(e.field2));
+    function saveLimits(shedId, limits) {
+      localStorage.setItem(`limits-${shedId}`, JSON.stringify(limits));
+    }
 
-        new Chart(document.getElementById(`temp-${channelId}`), {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Temperature (°C)',
-              data: temp,
-              borderColor: 'red',
-              backgroundColor: 'rgba(255,0,0,0.1)',
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              y: { beginAtZero: true }
+    function getLimits(shedId) {
+      const saved = localStorage.getItem(`limits-${shedId}`);
+      return saved ? JSON.parse(saved) : { low: 20, high: 35 };
+    }
+
+    function fetchAndRender() {
+      shedGrid.innerHTML = "";
+      for (const [shed, channelId] of Object.entries(shedChannels)) {
+        const limits = getLimits(channelId);
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.id = `card-${channelId}`;
+        card.onclick = () => {
+          window.location.href = `shed-history.html?shed=${encodeURIComponent(shed)}&channel=${channelId}`;
+        };
+
+        card.innerHTML = `
+          <h3>${shed}</h3>
+          <div class="value-row"><span>🌡️ Temp:</span> <span id="temp-${channelId}" class="value">-</span></div>
+          <div class="value-row"><span>💧 Hum:</span> <span id="hum-${channelId}" class="value">-</span></div>
+          <div class="limits">Low: <span id="low-limit-${channelId}">${limits.low}</span>° | High: <span id="high-limit-${channelId}">${limits.high}</span>°</div>
+          <div class="footer"><span></span><span id="last-updated-${channelId}">🕒 -</span></div>
+        `;
+        shedGrid.appendChild(card);
+
+        fetch(`https://api.thingspeak.com/channels/${channelId}/feeds.json?results=1`)
+          .then(res => res.json())
+          .then(data => {
+            const feed = data.feeds[0];
+            const tempValue = feed?.field1 || "-";
+            const humValue = feed?.field2 || "-";
+            document.getElementById(`temp-${channelId}`).textContent = tempValue;
+            document.getElementById(`hum-${channelId}`).textContent = humValue;
+
+            const updatedTime = feed?.created_at ? new Date(feed.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-";
+            document.getElementById(`last-updated-${channelId}`).textContent = `🕒 ${updatedTime}`;
+
+            const tempNum = parseFloat(tempValue);
+            const cardEl = document.getElementById(`card-${channelId}`);
+            if (tempValue === "-" || isNaN(tempNum)) {
+              cardEl.classList.remove("blinking");
+            } else if (tempNum < limits.low || tempNum > limits.high) {
+              cardEl.classList.add("blinking");
+            } else {
+              cardEl.classList.remove("blinking");
             }
-          }
-        });
+          })
+          .catch(() => {
+            document.getElementById(`temp-${channelId}`).textContent = "-";
+            document.getElementById(`hum-${channelId}`).textContent = "-";
+            document.getElementById(`last-updated-${channelId}`).textContent = `🕒 -`;
+            document.getElementById(`card-${channelId}`).classList.remove("blinking");
+          });
+      }
+    }
 
-        new Chart(document.getElementById(`hum-${channelId}`), {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Humidity (%)',
-              data: hum,
-              borderColor: 'blue',
-              backgroundColor: 'rgba(0,0,255,0.1)',
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              y: { beginAtZero: true }
-            }
-          }
-        });
-      });
-  }
-</script>
+    fetchAndRender();
+    setInterval(fetchAndRender, 120000);
 
+    btnCancel.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+    limitsForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const low = parseFloat(lowInput.value);
+      const high = parseFloat(highInput.value);
+      if (isNaN(low) || isNaN(high) || low >= high) {
+        alert("Enter valid numeric limits where low < high.");
+        return;
+      }
+      if (isSettingAll) {
+        for (const channelId of Object.values(shedChannels)) {
+          saveLimits(channelId, { low, high });
+        }
+      } else {
+        saveLimits(currentEditingShedId, { low, high });
+      }
+      closeModal();
+      fetchAndRender();
+    });
+
+    setAllLimitsBtn.addEventListener("click", () => openLimitsModal(null));
+  </script>
 </body>
 </html>
