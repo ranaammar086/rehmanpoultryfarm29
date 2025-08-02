@@ -64,11 +64,13 @@
       color: #34495e;
     }
     .value-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-      font-size: 1rem;
-    }
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 1rem;
+  text-align: center;
+}
     .footer {
       display: flex;
       justify-content: space-between;
@@ -181,8 +183,8 @@
 
         card.innerHTML = `
           <h3>${shed}</h3>
-          <div class="value-row"><span>🌡️ Temp:</span> <span id="temp-${channelId}" class="value">-</span></div>
-          <div class="value-row"><span>💧 Hum:</span> <span id="hum-${channelId}" class="value">-</span></div>
+          <div class="value-row"><span>🌡️ Temp:</span> <span id="temp-$1" class="value">- °C</span></div>
+          <div class="value-row"><span>💧 Hum:</span> <span id="hum-$1" class="value">- %</span></div>
           <div class="limits">Low: <span id="low-limit-${channelId}">${limits.low}</span>° | High: <span id="high-limit-${channelId}">${limits.high}</span>°</div>
           <div class="footer"><span></span><span id="last-updated-${channelId}">🕒 -</span></div>
         `;
@@ -197,8 +199,8 @@ let humValue = feed?.field2;
 
 tempValue = (tempValue && !isNaN(tempValue)) ? parseFloat(tempValue).toFixed(1) : "-";
 humValue = (humValue && !isNaN(humValue)) ? parseFloat(humValue).toFixed(1) : "-";
-            document.getElementById(`temp-${channelId}`).textContent = tempValue;
-            document.getElementById(`hum-${channelId}`).textContent = humValue;
+            document.getElementById(`temp-${channelId}`).textContent = tempValue + ' °C';
+            document.getElementById(`hum-${channelId}`).textContent = humValue + ' %';
 
             const updatedTime = feed?.created_at ? new Date(feed.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-";
             document.getElementById(`last-updated-${channelId}`).textContent = `🕒 ${updatedTime}`;
@@ -251,3 +253,4 @@ humValue = (humValue && !isNaN(humValue)) ? parseFloat(humValue).toFixed(1) : "-
   </script>
 </body>
 </html>
+
