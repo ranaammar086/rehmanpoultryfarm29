@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rehman Poultry Farm 29/11L - Shed History</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f8fb;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #2980b9;
+      margin-top: 5px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .filters label {
+      font-weight: 600;
+      color: #34495e;
+    }
+
+    .filters input,
+    .filters select {
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    .summary {
+      text-align: center;
+      margin: 10px auto 20px auto;
+      font-size: 1.1rem;
+      color: #555;
+    }
+
+    #downloadBtn {
+      display: block;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+    }
+
+    table th,
+    table td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: center;
+    }
+
+    table th {
+      background-color: #3498db;
+      color: white;
+    }
+
+    table tr:nth-child(even) {
+      background-color: #ecf0f1;
+    }
+
+    table tr:nth-child(odd) {
+      background-color: #fdfefe;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Rehman Poultry Farm 29/11L</h1>
+  <h2 id="shedTitle">Shed No. --</h2>
+
+  <div class="filters">
+    <label for="date">Date:</label>
+    <input type="date" id="date" />
+
+    <label for="interval">Interval:</label>
+    <select id="interval">
+      <option value="5">5 Minute</option>
+      <option value="10">10 Minute</option>
+      <option value="15">15 Minute</option>
+      <option value="30">30 Minute</option>
+      <option value="60" selected>1 Hour</option>
+    </select>
+  </div>
+
+  <div class="summary">
+    <span>🔴 High Temp: <strong id="highTemp">-</strong> °C</span> &nbsp; | &nbsp;
+    <span>🔵 Low Temp: <strong id="lowTemp">-</strong> °C</strong></span>
+  </div>
+
+  <button id="downloadBtn">📄 Download PDF</button>
+
+  <table id="historyTable">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Temperature</th>
+        <th>Humidity</th>
+        <th>Avg Temperature</th>
+        <th>Avg Humidity</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Filled dynamically -->
+    </tbody>
+  </table>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const shedName = urlParams.get("shed") || "Shed 1";
+    const channelId = urlParams.get("channel") || 3006164;
+
+    const shedTitle = document.getElementById('shedTitle');
+    const dateInput = document.getElementById('date');
+    const intervalSelect = document.getElementById('interval');
+    const tbody = document.querySelector('#historyTable tbody');
+    const highTempEl = document.getElementById('highTemp');
+    const lowTempEl = document.getElementById('lowTemp');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    function formatTimeBlock(hour) {
+      return `${hour.toString().padStart(2, '0')}:00`;
+    }
+
+    function generateDummyData() {
+      const rows = [];
+      let high = -Infinity;
+      let low = Infinity;
+
+      for (let h = 0; h < 24; h++) {
+        const temp = Math.random() > 0.2 ? (20 + Math.random() * 15).toFixed(1) : "-";
+        const hum = Math.random() > 0.2 ? (40 + Math.random() * 30).toFixed(1) : "-";
+
+        const avgT = temp !== "-" ? temp : "-";
+        const avgH = hum !== "-" ? hum : "-";
+
+        rows.push({ time: formatTimeBlock(h), temp, hum, avgT, avgH });
+
+        if (temp !== "-") {
+          const t = parseFloat(temp);
+          high = Math.max(high, t);
+          low = Math.min(low, t);
+        }
+      }
+
+      highTempEl.textContent = high !== -Infinity ? high.toFixed(1) : "-";
+      lowTempEl.textContent = low !== Infinity ? low.toFixed(1) : "-";
+
+      return rows;
+    }
+
+    function populateTable() {
+      tbody.innerHTML = "";
+      const rows = generateDummyData();
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.time}</td><td>${row.temp}</td><td>${row.hum}</td><td>${row.avgT}</td><td>${row.avgH}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function setTodayDate() {
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.value = today;
+    }
+
+    function updateTitle() {
+      shedTitle.textContent = `${shedName} - ${dateInput.value}`;
+    }
+
+    dateInput.addEventListener('change', () => {
+      populateTable();
+      updateTitle();
+    });
+
+    intervalSelect.addEventListener('change', () => {
+      populateTable();
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      doc.setFontSize(16);
+      doc.text(`Rehman Poultry Farm 29/11L - ${shedName}`, 10, 15);
+      doc.setFontSize(12);
+      doc.text(`Date: ${dateInput.value}`, 10, 22);
+      doc.text(`High Temp: ${highTempEl.textContent} °C`, 10, 30);
+      doc.text(`Low Temp: ${lowTempEl.textContent} °C`, 60, 30);
+
+      doc.autoTable({
+        head: [['Time', 'Temperature', 'Humidity', 'Avg Temp', 'Avg Humidity']],
+        body: Array.from(tbody.children).map(tr =>
+          Array.from(tr.children).map(td => td.textContent)
+        ),
+        startY: 40,
+        theme: 'grid'
+      });
+
+      doc.save(`${shedName.replace(/\s+/g, '_')}_${dateInput.value}.pdf`);
+    });
+
+    // Init
+    shedTitle.textContent = shedName;
+    setTodayDate();
+    updateTitle();
+    populateTable();
+  </script>
+</body>
+</html>
