@@ -10,19 +10,16 @@
       margin: 0;
       padding: 20px;
     }
-
     h1 {
       text-align: center;
       color: #2c3e50;
       margin-bottom: 10px;
     }
-
     h2 {
       text-align: center;
       color: #2980b9;
       margin-top: 5px;
     }
-
     .filters {
       display: flex;
       flex-wrap: wrap;
@@ -30,12 +27,10 @@
       gap: 15px;
       margin-bottom: 20px;
     }
-
     .filters label {
       font-weight: 600;
       color: #34495e;
     }
-
     .filters input,
     .filters select {
       padding: 8px 10px;
@@ -43,14 +38,12 @@
       border-radius: 6px;
       font-size: 1rem;
     }
-
     .summary {
       text-align: center;
       margin: 10px auto 20px auto;
       font-size: 1.1rem;
       color: #555;
     }
-
     #downloadBtn {
       display: block;
       margin: 0 auto 20px auto;
@@ -63,29 +56,24 @@
       cursor: pointer;
       font-weight: bold;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 40px;
     }
-
     table th,
     table td {
       border: 1px solid #ccc;
       padding: 8px 12px;
       text-align: center;
     }
-
     table th {
       background-color: #3498db;
       color: white;
     }
-
     table tr:nth-child(even) {
       background-color: #ecf0f1;
     }
-
     table tr:nth-child(odd) {
       background-color: #fdfefe;
     }
@@ -112,7 +100,7 @@
 
   <div class="summary">
     <span>🔴 High Temp: <strong id="highTemp">-</strong> °C</span> &nbsp; | &nbsp;
-    <span>🔵 Low Temp: <strong id="lowTemp">-</strong> °C</strong></span>
+    <span>🔵 Low Temp: <strong id="lowTemp">-</strong> °C</span>
   </div>
 
   <button id="downloadBtn">📄 Download PDF</button>
@@ -121,10 +109,10 @@
     <thead>
       <tr>
         <th>Time</th>
-        <th>Temperature</th>
-        <th>Humidity</th>
-        <th>Avg Temperature</th>
-        <th>Avg Humidity</th>
+        <th>Temperature (°C)</th>
+        <th>Humidity (%)</th>
+        <th>Avg Temperature (°C)</th>
+        <th>Avg Humidity (%)</th>
       </tr>
     </thead>
     <tbody>
@@ -147,63 +135,152 @@
     const lowTempEl = document.getElementById('lowTemp');
     const downloadBtn = document.getElementById('downloadBtn');
 
-    function formatTimeBlock(hour) {
-      return `${hour.toString().padStart(2, '0')}:00`;
-    }
-
-    function generateDummyData() {
-      const rows = [];
-      let high = -Infinity;
-      let low = Infinity;
-
-      for (let h = 0; h < 24; h++) {
-        const temp = Math.random() > 0.2 ? (20 + Math.random() * 15).toFixed(1) : "-";
-        const hum = Math.random() > 0.2 ? (40 + Math.random() * 30).toFixed(1) : "-";
-
-        const avgT = temp !== "-" ? temp : "-";
-        const avgH = hum !== "-" ? hum : "-";
-
-        rows.push({ time: formatTimeBlock(h), temp, hum, avgT, avgH });
-
-        if (temp !== "-") {
-          const t = parseFloat(temp);
-          high = Math.max(high, t);
-          low = Math.min(low, t);
-        }
-      }
-
-      highTempEl.textContent = high !== -Infinity ? high.toFixed(1) : "-";
-      lowTempEl.textContent = low !== Infinity ? low.toFixed(1) : "-";
-
-      return rows;
-    }
-
-    function populateTable() {
-      tbody.innerHTML = "";
-      const rows = generateDummyData();
-      for (const row of rows) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${row.time}</td><td>${row.temp}</td><td>${row.hum}</td><td>${row.avgT}</td><td>${row.avgH}</td>`;
-        tbody.appendChild(tr);
-      }
-    }
-
+    // Initialize date input to today
     function setTodayDate() {
       const today = new Date().toISOString().split('T')[0];
       dateInput.value = today;
+    }
+
+    // Format time hh:mm for a date object
+    function formatTime(date) {
+      return date.toTimeString().slice(0,5);
+    }
+
+    // Group data into intervals and calculate averages
+    function groupData(feeds, intervalMinutes) {
+      // Create map from interval start time (string "HH:MM") to array of readings
+      const groups = new Map();
+
+      // For high/low calculation
+      let highTemp = -Infinity;
+      let lowTemp = Infinity;
+
+      // Initialize intervals of the day based on 00:00 to 23:59
+      const intervals = [];
+      const startDate = new Date(dateInput.value + "T00:00:00");
+      for(let ms = 0; ms < 24*60*60*1000; ms += intervalMinutes*60000) {
+        const d = new Date(startDate.getTime() + ms);
+        intervals.push(d);
+        groups.set(formatTime(d), []);
+      }
+
+      // Process feeds and assign to interval groups
+      for (const feed of feeds) {
+        if (!feed.created_at) continue;
+        const feedDate = new Date(feed.created_at);
+        // Only process feeds matching the selected date (UTC or local?)
+        // To keep consistent, compare only date part (YYYY-MM-DD)
+        const feedDateStr = feedDate.toISOString().slice(0,10);
+        if (feedDateStr !== dateInput.value) continue;
+
+        // Find interval key for this feed
+        // Round down minutes to nearest interval
+        const mins = feedDate.getMinutes();
+        const roundedMins = mins - (mins % intervalMinutes);
+        const intervalKey = feedDate.getHours().toString().padStart(2,'0') + ":" + roundedMins.toString().padStart(2,'0');
+
+        groups.get(intervalKey)?.push(feed);
+      }
+
+      // Now calculate avg for each interval and find high/low temps overall
+      const resultRows = [];
+
+      for (const intervalTime of intervals) {
+        const key = formatTime(intervalTime);
+        const feedsInInterval = groups.get(key) || [];
+
+        let temps = [];
+        let hums = [];
+
+        for (const f of feedsInInterval) {
+          const t = parseFloat(f.field1);
+          const h = parseFloat(f.field2);
+          if (!isNaN(t)) temps.push(t);
+          if (!isNaN(h)) hums.push(h);
+        }
+
+        // Calculate average
+        const avgTemp = temps.length ? (temps.reduce((a,b) => a+b,0)/temps.length).toFixed(1) : "-";
+        const avgHum = hums.length ? (hums.reduce((a,b) => a+b,0)/hums.length).toFixed(1) : "-";
+
+        // Take single value for display (if multiple, take last feed's temp/hum in interval)
+        const displayTemp = temps.length ? temps[temps.length-1].toFixed(1) : "-";
+        const displayHum = hums.length ? hums[hums.length-1].toFixed(1) : "-";
+
+        if (avgTemp !== "-") {
+          highTemp = Math.max(highTemp, parseFloat(avgTemp));
+          lowTemp = Math.min(lowTemp, parseFloat(avgTemp));
+        }
+
+        resultRows.push({
+          time: key,
+          temp: displayTemp,
+          hum: displayHum,
+          avgT: avgTemp,
+          avgH: avgHum,
+        });
+      }
+
+      // Update high/low labels
+      highTempEl.textContent = highTemp === -Infinity ? "-" : highTemp.toFixed(1);
+      lowTempEl.textContent = lowTemp === Infinity ? "-" : lowTemp.toFixed(1);
+
+      return resultRows;
+    }
+
+    // Fetch data from ThingSpeak API (max 8000 entries)
+    async function fetchData() {
+      const date = dateInput.value;
+      const interval = parseInt(intervalSelect.value);
+
+      // Show loading text
+      tbody.innerHTML = `<tr><td colspan="5">Loading data...</td></tr>`;
+      highTempEl.textContent = "-";
+      lowTempEl.textContent = "-";
+
+      try {
+        // ThingSpeak API for channel feed JSON: limit max 8000
+        const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?results=8000`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.feeds || data.feeds.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5">No data available for selected date.</td></tr>`;
+          return;
+        }
+
+        // Filter and group data
+        const rows = groupData(data.feeds, interval);
+
+        // Populate table
+        tbody.innerHTML = "";
+        if(rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5">No data available for selected date.</td></tr>`;
+          return;
+        }
+        for (const row of rows) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${row.time}</td><td>${row.temp}</td><td>${row.hum}</td><td>${row.avgT}</td><td>${row.avgH}</td>`;
+          tbody.appendChild(tr);
+        }
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="5">Error loading data.</td></tr>`;
+        console.error(error);
+      }
     }
 
     function updateTitle() {
       shedTitle.textContent = `${shedName} - ${dateInput.value}`;
     }
 
+    // Event listeners
     dateInput.addEventListener('change', () => {
-      populateTable();
       updateTitle();
+      fetchData();
     });
 
     intervalSelect.addEventListener('change', () => {
-      populateTable();
+      fetchData();
     });
 
     downloadBtn.addEventListener('click', () => {
@@ -229,11 +306,12 @@
       doc.save(`${shedName.replace(/\s+/g, '_')}_${dateInput.value}.pdf`);
     });
 
-    // Init
+    // Initialization
     shedTitle.textContent = shedName;
     setTodayDate();
     updateTitle();
-    populateTable();
+    fetchData();
+
   </script>
 </body>
 </html>
