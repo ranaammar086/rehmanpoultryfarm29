@@ -1,202 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Rehman Poultry Farm 29/11L - Shed History</title>
-<style>
-  body { font-family: 'Segoe UI', sans-serif; background:#f4f8fb; padding:20px; }
-  h1, h2 { text-align:center; }
-  .filters { display:flex; justify-content:center; gap:15px; margin-bottom:20px; }
-  label { font-weight:600; }
-  input, select { padding:8px; font-size:1rem; border-radius:6px; border:1px solid #ccc; }
-  table { width:100%; border-collapse:collapse; margin-top:20px; }
-  th, td { border:1px solid #ccc; padding:8px; text-align:center; }
-  th { background:#3498db; color:#fff; }
-  tr:nth-child(even) { background:#ecf0f1; }
-  tr:nth-child(odd) { background:#fff; }
-  #downloadBtn { display:block; margin:20px auto; padding:10px 20px; background:#27ae60; color:#fff; border:none; border-radius:20px; cursor:pointer; font-weight:bold; }
-  .summary { text-align:center; margin:10px 0; font-size:1.1rem; color:#555; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Rehman Poultry Farm 29/11L - Shed History</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f8fb;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    h2 {
+      text-align: center;
+      color: #2980b9;
+      margin-top: 5px;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .filters label {
+      font-weight: 600;
+      color: #34495e;
+    }
+    .filters input,
+    .filters select {
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    .summary {
+      text-align: center;
+      margin: 10px auto 20px auto;
+      font-size: 1.1rem;
+      color: #555;
+    }
+    #downloadBtn {
+      display: block;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+    }
+    table th,
+    table td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: center;
+    }
+    table th {
+      background-color: #3498db;
+      color: white;
+    }
+    table tr:nth-child(even) {
+      background-color: #ecf0f1;
+    }
+    table tr:nth-child(odd) {
+      background-color: #fdfefe;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Rehman Poultry Farm 29/11L</h1>
-<h2 id="shedTitle">Shed No. --</h2>
+  <h1>Rehman Poultry Farm 29/11L</h1>
+  <h2 id="shedTitle">Shed No. --</h2>
 
-<div class="filters">
-  <label for="date">Date:</label>
-  <input type="date" id="date" />
-  <label for="interval">Interval (minutes):</label>
-  <select id="interval">
-    <option value="5">5</option>
-    <option value="10">10</option>
-    <option value="15">15</option>
-    <option value="30">30</option>
-    <option value="60" selected>60</option>
-  </select>
-</div>
+  <div class="filters">
+    <label for="date">Date:</label>
+    <input type="date" id="date" />
 
-<div class="summary">
-  <span>🔴 High Temp: <strong id="highTemp">-</strong> °C</span> &nbsp; | &nbsp;
-  <span>🔵 Low Temp: <strong id="lowTemp">-</strong> °C</span>
-</div>
+    <label for="interval">Interval:</label>
+    <select id="interval">
+      <option value="5">5 Minute</option>
+      <option value="10">10 Minute</option>
+      <option value="15">15 Minute</option>
+      <option value="30">30 Minute</option>
+      <option value="60" selected>1 Hour</option>
+    </select>
+  </div>
 
-<button id="downloadBtn">📄 Download PDF</button>
+  <div class="summary">
+    <span>🔴 High Temp: <strong id="highTemp">-</strong> °C</span> &nbsp; | &nbsp;
+    <span>🔵 Low Temp: <strong id="lowTemp">-</strong> °C</span>
+  </div>
 
-<table id="historyTable">
-  <thead>
-    <tr>
-      <th>Time</th>
-      <th>Temperature (first)</th>
-      <th>Humidity (first)</th>
-      <th>Avg Temperature</th>
-      <th>Avg Humidity</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+  <button id="downloadBtn">📄 Download PDF</button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-<script>
-  // Settings
-  const PST_OFFSET_MINUTES = 5 * 60; // Pakistan Standard Time offset (+5 hours)
-  const channelId = new URLSearchParams(window.location.search).get('channel') || '3006164';
-  const shedName = new URLSearchParams(window.location.search).get('shed') || 'Shed 1';
+  <table id="historyTable">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Temperature</th>
+        <th>Humidity</th>
+        <th>Avg Temperature</th>
+        <th>Avg Humidity</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Filled dynamically -->
+    </tbody>
+  </table>
 
-  // Elements
-  const shedTitle = document.getElementById('shedTitle');
-  const dateInput = document.getElementById('date');
-  const intervalSelect = document.getElementById('interval');
-  const tbody = document.querySelector('#historyTable tbody');
-  const highTempEl = document.getElementById('highTemp');
-  const lowTempEl = document.getElementById('lowTemp');
-  const downloadBtn = document.getElementById('downloadBtn');
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <script>
+    // ====== CONFIG - replace this with your real channel id =======
+    const channelId = '3006164'; // Your public ThingSpeak channel ID
+    const shedName = 'Shed 29/11L';
 
-  shedTitle.textContent = shedName;
+    // Elements
+    const shedTitle = document.getElementById('shedTitle');
+    const dateInput = document.getElementById('date');
+    const intervalSelect = document.getElementById('interval');
+    const tbody = document.querySelector('#historyTable tbody');
+    const highTempEl = document.getElementById('highTemp');
+    const lowTempEl = document.getElementById('lowTemp');
+    const downloadBtn = document.getElementById('downloadBtn');
 
-  // Helpers
-  function toPST(date) {
-    return new Date(date.getTime() + PST_OFFSET_MINUTES * 60000);
-  }
+    // Set shed title and default date
+    shedTitle.textContent = shedName;
+    setTodayDate();
+    updateTitle();
 
-  function formatHHMM(date) {
-    return date.getHours().toString().padStart(2,'0') + ':' + date.getMinutes().toString().padStart(2,'0');
-  }
+    // Initialize
+    fetchAndRender();
 
-  function zeroPad(num) {
-    return num.toString().padStart(2,'0');
-  }
-
-  // Generate interval start times array for the full day in PST
-  function generateIntervals(dateStr, intervalMins) {
-    const intervals = [];
-    const baseDate = new Date(dateStr + 'T00:00:00');
-    for(let mins=0; mins<24*60; mins+=intervalMins) {
-      intervals.push(new Date(baseDate.getTime() + mins*60000));
-    }
-    return intervals;
-  }
-
-  // Group feeds into intervals and calculate first and averages
-  function processFeeds(feeds, intervalMins, selectedDate) {
-    // Create intervals
-    const intervals = generateIntervals(selectedDate, intervalMins);
-    const groups = new Map();
-
-    // Initialize groups keys by HH:MM string
-    intervals.forEach(dt => groups.set(formatHHMM(dt), []));
-
-    // Filter and group feeds
-    feeds.forEach(feed => {
-      if(!feed.created_at) return;
-
-      // Parse feed time in UTC, convert to PST
-      const feedUTC = new Date(feed.created_at + 'Z'); // force UTC parsing
-      const feedPST = toPST(feedUTC);
-
-      const feedDateStr = feedPST.toISOString().substring(0,10);
-      if(feedDateStr !== selectedDate) return; // skip feeds not in selected date in PST
-
-      // Determine interval key
-      const totalMinutes = feedPST.getHours() * 60 + feedPST.getMinutes();
-      const intervalStartMin = totalMinutes - (totalMinutes % intervalMins);
-      const hour = Math.floor(intervalStartMin / 60);
-      const minute = intervalStartMin % 60;
-      const key = zeroPad(hour) + ':' + zeroPad(minute);
-
-      if(groups.has(key)) {
-        groups.get(key).push(feed);
-      }
+    // Event listeners
+    dateInput.addEventListener('change', () => {
+      updateTitle();
+      fetchAndRender();
     });
 
-    let highTemp = -Infinity;
-    let lowTemp = Infinity;
-    const results = [];
+    intervalSelect.addEventListener('change', () => {
+      fetchAndRender();
+    });
 
-    intervals.forEach(intervalStart => {
-      const key = formatHHMM(intervalStart);
-      const group = groups.get(key);
+    downloadBtn.addEventListener('click', () => {
+      downloadPDF();
+    });
 
-      if(!group || group.length === 0) {
-        results.push({time: key, temp:'-', hum:'-', avgT:'-', avgH:'-'});
+    function setTodayDate() {
+      // Set date input to today's date (in local timezone)
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.value = today;
+    }
+
+    function updateTitle() {
+      shedTitle.textContent = `${shedName} - ${dateInput.value}`;
+    }
+
+    // --- Helper: Format time label like "01:00" ---
+    function formatTimeLabel(date) {
+      const h = date.getHours().toString().padStart(2,'0');
+      const m = date.getMinutes().toString().padStart(2,'0');
+      return `${h}:${m}`;
+    }
+
+    // --- Fetch data from ThingSpeak API ---
+    async function fetchData() {
+      const dateVal = dateInput.value;
+      if (!dateVal) return [];
+
+      tbody.innerHTML = '<tr><td colspan="5">Loading data...</td></tr>';
+
+      // Construct start/end in UTC (ThingSpeak expects ISO8601 UTC)
+      // We want to fetch data for that date in Pakistan time (UTC+5),
+      // So start at dateVal + 00:00:00 PKT and end at 23:59:59 PKT
+      // Convert those PKT times to UTC by subtracting 5 hours
+
+      const startPKT = new Date(dateVal + 'T00:00:00+05:00'); 
+      const endPKT = new Date(dateVal + 'T23:59:59+05:00');
+
+      // Convert to ISO strings in UTC (ThingSpeak needs UTC ISO strings)
+      const startUTCISO = new Date(startPKT.getTime() - (startPKT.getTimezoneOffset()*60000)).toISOString().replace('Z', ''); 
+      const endUTCISO = new Date(endPKT.getTime() - (endPKT.getTimezoneOffset()*60000)).toISOString().replace('Z', '');
+
+      // ThingSpeak API URL for feeds for the channel, limited to 8000 max results
+      const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?start=${startUTCISO}&end=${endUTCISO}&results=8000`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Network response not OK: ' + res.status);
+        const data = await res.json();
+        if (!data.feeds) throw new Error('Invalid data format from API');
+
+        return data.feeds;
+
+      } catch(err) {
+        tbody.innerHTML = '<tr><td colspan="5">Error loading data.</td></tr>';
+        console.error('Fetch error:', err);
+        return [];
+      }
+    }
+
+    // --- Group feeds by interval (in minutes) ---
+    // For each interval:
+    // - first valid temp/hum is shown as "Temperature" and "Humidity"
+    // - average temp/hum of all valid entries is shown as "Avg Temperature" and "Avg Humidity"
+    function groupFeedsByInterval(feeds, intervalMinutes, dateVal) {
+      // Parse feeds timestamps to Date in Pakistan timezone (GMT+5)
+      // Then group by interval slots
+
+      // Prepare container for grouped data
+      const groups = {};
+
+      feeds.forEach(feed => {
+        if (!feed.created_at) return;
+
+        // Parse feed time as Date object
+        // ThingSpeak returns UTC timestamps, so convert UTC to PKT (UTC+5)
+        const feedUTC = new Date(feed.created_at);
+        const feedPKT = new Date(feedUTC.getTime() + 5*60*60000); // +5 hours
+
+        // Ignore feeds outside selected date (just in case)
+        const feedDatePKT = feedPKT.toISOString().split('T')[0];
+        if (feedDatePKT !== dateVal) return;
+
+        // Calculate the interval slot start time (minute rounded down)
+        const h = feedPKT.getHours();
+        const m = feedPKT.getMinutes();
+        const intervalStartMinute = m - (m % intervalMinutes);
+
+        // Create group key: e.g. "13:15" for 15 min interval at 13:15
+        const key = `${h.toString().padStart(2,'0')}:${intervalStartMinute.toString().padStart(2,'0')}`;
+
+        if (!groups[key]) {
+          groups[key] = {
+            temps: [],
+            hums: [],
+            firstTemp: null,
+            firstHum: null,
+            timeLabel: key,
+          };
+        }
+
+        // Try parse temp and humidity as floats (ThingSpeak fields like field1, field2)
+        const temp = parseFloat(feed.field1);
+        const hum = parseFloat(feed.field2);
+
+        if (!isNaN(temp)) {
+          groups[key].temps.push(temp);
+          if (groups[key].firstTemp === null) groups[key].firstTemp = temp;
+        }
+
+        if (!isNaN(hum)) {
+          groups[key].hums.push(hum);
+          if (groups[key].firstHum === null) groups[key].firstHum = hum;
+        }
+      });
+
+      // Now build the rows array sorted by time ascending
+      const rows = Object.keys(groups)
+        .sort((a,b) => {
+          // Sort keys like "HH:MM"
+          const [ha, ma] = a.split(':').map(Number);
+          const [hb, mb] = b.split(':').map(Number);
+          return ha - hb || ma - mb;
+        })
+        .map(key => {
+          const g = groups[key];
+
+          // Compute averages
+          const avgT = g.temps.length ? (g.temps.reduce((a,b) => a+b, 0) / g.temps.length) : null;
+          const avgH = g.hums.length ? (g.hums.reduce((a,b) => a+b, 0) / g.hums.length) : null;
+
+          return {
+            time: g.timeLabel,
+            temp: g.firstTemp !== null ? g.firstTemp.toFixed(1) : '-',
+            hum: g.firstHum !== null ? g.firstHum.toFixed(1) : '-',
+            avgT: avgT !== null ? avgT.toFixed(1) : '-',
+            avgH: avgH !== null ? avgH.toFixed(1) : '-',
+          };
+        });
+
+      return rows;
+    }
+
+    // --- Find high and low temperature from rows ---
+    function findHighLow(rows) {
+      let high = -Infinity;
+      let low = Infinity;
+      rows.forEach(r => {
+        if (r.temp !== '-' && !isNaN(parseFloat(r.temp))) {
+          const t = parseFloat(r.temp);
+          if (t > high) high = t;
+          if (t < low) low = t;
+        }
+      });
+      return {
+        high: high === -Infinity ? '-' : high.toFixed(1),
+        low: low === Infinity ? '-' : low.toFixed(1)
+      };
+    }
+
+    // --- Main function to fetch data and render table ---
+    async function fetchAndRender() {
+      const feeds = await fetchData();
+      if (feeds.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">No data found for selected date.</td></tr>';
+        highTempEl.textContent = '-';
+        lowTempEl.textContent = '-';
         return;
       }
 
-      // Sort group by created_at ascending
-      group.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-
-      // First readings:
-      const firstTemp = parseFloat(group[0].field1);
-      const firstHum = parseFloat(group[0].field2);
-
-      // Averages:
-      const temps = group.map(f => parseFloat(f.field1)).filter(v => !isNaN(v));
-      const hums = group.map(f => parseFloat(f.field2)).filter(v => !isNaN(v));
-      const avgTemp = temps.length ? (temps.reduce((a,b) => a+b,0)/temps.length).toFixed(1) : '-';
-      const avgHum = hums.length ? (hums.reduce((a,b) => a+b,0)/hums.length).toFixed(1) : '-';
-
-      if(avgTemp !== '-') {
-        highTemp = Math.max(highTemp, parseFloat(avgTemp));
-        lowTemp = Math.min(lowTemp, parseFloat(avgTemp));
-      }
-
-      results.push({
-        time: key,
-        temp: isNaN(firstTemp) ? '-' : firstTemp.toFixed(1),
-        hum: isNaN(firstHum) ? '-' : firstHum.toFixed(1),
-        avgT: avgTemp,
-        avgH: avgHum
-      });
-    });
-
-    highTempEl.textContent = highTemp === -Infinity ? '-' : highTemp.toFixed(1);
-    lowTempEl.textContent = lowTemp === Infinity ? '-' : lowTemp.toFixed(1);
-
-    return results;
-  }
-
-  // Fetch data from ThingSpeak
-  async function fetchData() {
-    const dateVal = dateInput.value;
-    if(!dateVal) return;
-
-    tbody.innerHTML = '<tr><td colspan="5">Loading data...</td></tr>';
-
-    try {
-      // Fetch feeds for selected date (full day)
-      const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?start=${dateVal}T00:00:00&end=${dateVal}T23:59:59&results=1000`;
-      const res = await fetch(url);
-      if(!res.ok) throw new Error('Fetch error: ' + res.status);
-
-      const json = await res.json();
-      const feeds = json.feeds || [];
-
       const intervalMins = parseInt(intervalSelect.value, 10);
-      const grouped = processFeeds(feeds, intervalMins, dateVal);
+      const dateVal = dateInput.value;
 
+      const rows = groupFeedsByInterval(feeds, intervalMins, dateVal);
+
+      // Render table
       tbody.innerHTML = '';
-      grouped.forEach(row => {
+      rows.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${row.time}</td>
@@ -208,54 +341,35 @@
         tbody.appendChild(tr);
       });
 
-    } catch(err) {
-      tbody.innerHTML = '<tr><td colspan="5">Error loading data.</td></tr>';
-      console.error(err);
+      // Update high/low temperature summary
+      const { high, low } = findHighLow(rows);
+      highTempEl.textContent = high;
+      lowTempEl.textContent = low;
     }
-  }
 
-  // Download PDF
-  function downloadPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    // --- PDF download function ---
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    doc.setFontSize(18);
-    doc.text("Rehman Poultry Farm 29/11L", 14, 20);
-    doc.setFontSize(14);
-    doc.text(`Shed: ${shedName}`, 14, 30);
-    doc.text(`Date: ${dateInput.value}`, 14, 38);
-    doc.text(`Interval: ${intervalSelect.value} Minute(s)`, 14, 46);
-    doc.text(`High Temp: ${highTempEl.textContent} °C`, 14, 54);
-    doc.text(`Low Temp: ${lowTempEl.textContent} °C`, 100, 54);
+      doc.setFontSize(16);
+      doc.text(`Rehman Poultry Farm 29/11L - ${shedName}`, 10, 15);
+      doc.setFontSize(12);
+      doc.text(`Date: ${dateInput.value}`, 10, 22);
+      doc.text(`High Temp: ${highTempEl.textContent} °C`, 10, 30);
+      doc.text(`Low Temp: ${lowTempEl.textContent} °C`, 60, 30);
 
-    doc.autoTable({
-      startY: 60,
-      head: [['Time', 'Temperature (first)', 'Humidity (first)', 'Avg Temperature', 'Avg Humidity']],
-      body: Array.from(tbody.rows).map(r => Array.from(r.cells).map(c => c.textContent)),
-      theme: 'striped',
-      headStyles: { fillColor: [52, 152, 219] }
-    });
+      doc.autoTable({
+        head: [['Time', 'Temperature', 'Humidity', 'Avg Temp', 'Avg Humidity']],
+        body: Array.from(tbody.children).map(tr =>
+          Array.from(tr.children).map(td => td.textContent)
+        ),
+        startY: 40,
+        theme: 'grid',
+      });
 
-    doc.save(`Shed_${shedName}_${dateInput.value}.pdf`);
-  }
-
-  // Set default date to today in PKT
-  function setDefaultDate() {
-    const now = new Date();
-    const nowUTC = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
-    const nowPKT = new Date(nowUTC.getTime() + PST_OFFSET_MINUTES * 60000);
-    dateInput.value = nowPKT.toISOString().split('T')[0];
-  }
-
-  // Init
-  setDefaultDate();
-  fetchData();
-
-  dateInput.addEventListener('change', fetchData);
-  intervalSelect.addEventListener('change', fetchData);
-  downloadBtn.addEventListener('click', downloadPDF);
-
-</script>
-
+      doc.save(`${shedName.replace(/\s+/g, '_')}_${dateInput.value}.pdf`);
+    }
+  </script>
 </body>
 </html>
